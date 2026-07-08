@@ -219,6 +219,7 @@ footer b{color:#fff}
 .daycell .dl{font-size:10.5px;color:var(--muted)}
 .daycell input[type=checkbox]{width:20px;height:20px;accent-color:var(--green);cursor:pointer;margin-top:4px}
 .daycell.today{border-color:var(--orange);background:var(--orange-l)}
+.daycell .sugg{font-size:13px;margin-top:2px;line-height:1}
 .taskprog{font-size:12px;color:var(--muted);font-weight:600}
 @media(max-width:520px){.daygrid{grid-template-columns:repeat(7,1fr);gap:4px}.daycell{padding:4px 1px}.daycell .dl{font-size:9px}}
 
@@ -250,6 +251,7 @@ footer b{color:#fff}
     <button data-t="learn">📚 學習資源</button>
     <button data-t="concept">💡 核心觀念</button>
     <button data-t="diet">🍽 飲食記錄</button>
+    <button data-t="life">💧 喝水運動</button>
   </div>
 </nav>
 
@@ -279,10 +281,10 @@ footer b{color:#fff}
       </div>
       <div class="card">
         <h3>✅ 本計畫任務完成度</h3>
-        <div class="hint">12 週 × 每週 ABC 三項任務 × 7 天，共 252 項。到「12 週任務」展開每日打卡。</div>
+        <div class="hint">每週 ABC 三項任務 × 7 天，共 <span id="totalTasksHint">252</span> 項。到「12 週任務」展開每日打卡。</div>
         <canvas id="taskDonut" height="220"></canvas>
         <div style="text-align:center;margin-top:10px;font-size:14px;color:var(--muted)">
-          已完成 <b id="doneCount" style="color:var(--green)">0</b> / 252 項任務
+          已完成 <b id="doneCount" style="color:var(--green)">0</b> / <span id="totalTasksTxt">252</span> 項任務
         </div>
       </div>
     </div>
@@ -416,6 +418,12 @@ footer b{color:#fff}
     <p class="lead">每週三個任務：<b style="color:var(--orange)">A</b> 飲食加法、<b style="color:var(--blue)">B</b> 活動／習慣、<b style="color:#14B8A6">C</b> 減法。點任一張卡片看完整教學、重點與當週實作照片，並可勾選打卡。</p>
     <div class="weekgrid" id="weekgrid"></div>
     <div class="hl-box hl-good" style="margin-top:20px">🚀 <b>12 週結束後怎麼辦？</b>12 週只是打基礎，從 2026/7/13 起跑，目標是 6～12 個月內從 90.5kg 瘦到 74kg。12 週跑完後，回到「⚖️ 體檢記錄」持續每週量測、追蹤趨勢圖，並可挑選對你最有效的幾項 ABC 任務繼續執行，直到達標為止。</div>
+    <div class="card" style="margin-top:16px">
+      <h3>📅 產生後續週別任務</h3>
+      <div class="hint">依你目前已生成的所有週次執行狀況、體重趨勢，讓 AI 教練規劃接下來一批（4週）新任務，可重複按生成更多批次。需先在「🍽 飲食記錄」頁籤設定好 Anthropic API 金鑰。</div>
+      <button class="btn blue" id="genWeeksBtn" onclick="generateNextWeeks()" style="width:auto;padding:10px 20px">➕ 產生下一批 4 週任務</button>
+      <div id="genWeeksStatus" style="font-size:13px;color:var(--muted);margin-top:8px"></div>
+    </div>
   </div>
 </section>
 
@@ -463,6 +471,14 @@ footer b{color:#fff}
       <div class="concept"><h4>體態 > 體重</h4><p>你的價值不由體重決定。感受好、看起來好，比體重計上的數字更有意義。</p></div>
       <div class="concept"><h4>睡眠與減重密切相關</h4><p>睡不夠會升高皮質醇、刺激飢餓素，讓你更想亂吃。睡滿 7 小時是增肌減脂的重要關鍵。</p></div>
       <div class="concept"><h4>拿回人生的自主權</h4><p>ABC 不是要你一輩子不能吃，而是練習「有意識地選擇」要做或不做，掌握自己的身體與生活。</p></div>
+      <div class="concept"><h4>熱量赤字仍是根本原理</h4><p>再多技巧都建立在「消耗 > 攝取」之上。ABC任務的本質是用不痛苦的方式，慢慢創造這個赤字，而不是硬餓。</p></div>
+      <div class="concept"><h4>蛋白質是減脂期的護身符</h4><p>減重同時流失的不只是脂肪，還有肌肉。足量蛋白質能保住肌肉量，讓基礎代謝不因減重而下滑，也更不容易復胖。</p></div>
+      <div class="concept"><h4>NEAT 比刻意運動更值錢</h4><p>日常非運動性活動（走路、爬樓梯、家事）一整天累積的熱量消耗，往往比一次30分鐘運動更可觀，重點是「別坐著不動」。</p></div>
+      <div class="concept"><h4>復胖多半是壓力和睡眠問題</h4><p>皮質醇過高會促進脂肪囤積、增加食慾，睡不好會放大這個效應。管理壓力和睡眠，是體重管理被忽略的一半。</p></div>
+      <div class="concept"><h4>水分是代謝的隱形推手</h4><p>身體有一點點缺水就會誤判成飢餓，脂肪分解、腎臟代謝廢物都需要水參與。喝水量足夠，體重計上的數字才反映真實脂肪變化。</p></div>
+      <div class="concept"><h4>紀錄本身就是行為改變工具</h4><p>研究顯示，單純把吃的、喝的、動的寫下來，就能讓人自然而然吃少一點、動多一點，這也是為什麼記錄比想像中更有效。</p></div>
+      <div class="concept"><h4>平原期是正常生理現象</h4><p>體重不動不代表沒有進步，身體正在重新適應新的熱量平衡。這時該檢視的是體態、圍度、精神狀況，而不是只盯體重機。</p></div>
+      <div class="concept"><h4>彈性勝過完美主義</h4><p>一餐吃多、一天沒運動，都不是失敗，是計畫的一部分。能快速回到軌道的人，才是真正走得久的人。</p></div>
     </div>
   </div>
 </section>
@@ -534,6 +550,67 @@ footer b{color:#fff}
       </div>
       <p class="hint" style="margin-bottom:10px">系統每週一、每月 1 號會自動彙整你透過 Telegram 上傳的飲食紀錄，用 AI 生成一段總結報告並推送到 Telegram，同時保存在這裡供你回顧。</p>
       <div id="reportHistory"><div class="empty">尚未有週報/月報，第一份報告將在下個週一或月初自動產生。</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- LIFE: WATER & EXERCISE -->
+<section class="panel" id="life">
+  <div class="wrap">
+    <h2 class="sec">💧 喝水<span class="em">與運動記錄</span></h2>
+    <p class="lead">依你目前體重估算每日建議喝水量，並記錄每天的運動情形。也可以直接在 Telegram 傳訊息記錄（例如「喝水500」「走路30分鐘」），會自動同步到這裡。</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>💧 今日喝水</h3>
+        <div class="hint" id="waterTargetHint">建議每日喝水量依體重 × 30～40cc 估算。</div>
+        <div class="progress-wrap" style="padding:14px 16px;margin-top:0">
+          <div class="top">
+            <div><b style="font-size:16px" id="waterTodayTotal">0 cc</b> / <span id="waterTargetTxt">0 cc</span></div>
+            <span class="chip" id="waterPct">0%</span>
+          </div>
+          <div class="bar"><i id="waterBar" style="background:linear-gradient(90deg,#38BDF8,#0284C7)"></i></div>
+        </div>
+        <div class="form-row" style="margin-top:14px">
+          <button class="btn ghost" style="width:100%" onclick="addWater(200)">+200cc</button>
+          <button class="btn ghost" style="width:100%" onclick="addWater(350)">+350cc</button>
+        </div>
+        <div class="form-row">
+          <button class="btn ghost" style="width:100%" onclick="addWater(500)">+500cc</button>
+          <div style="display:flex;gap:6px">
+            <input type="number" id="i-water-custom" placeholder="自訂cc" style="flex:1">
+            <button class="btn" style="width:auto;padding:9px 14px" onclick="addWaterCustom()">＋</button>
+          </div>
+        </div>
+        <div class="localnote">紀錄存在這台電腦的瀏覽器裡；目標依「體檢記錄」最新體重自動更新。</div>
+      </div>
+      <div class="card">
+        <h3>🏃 新增一筆運動記錄</h3>
+        <div class="hint">選擇運動類型與時間，也可以自己新增類型。</div>
+        <div class="form-row">
+          <div><label class="f">運動類型</label><select id="i-ex-type"></select></div>
+          <div><label class="f">時長（分鐘）</label><input type="number" id="i-ex-min" placeholder="30"></div>
+        </div>
+        <div class="form-row" style="grid-template-columns:1fr">
+          <div><label class="f">補充說明（選填）</label><input type="text" id="i-ex-note" placeholder="例如：飯後快走、健身房啞鈴訓練..."></div>
+        </div>
+        <div class="form-row" style="grid-template-columns:2fr 1fr">
+          <div><input type="text" id="i-ex-newtype" placeholder="輸入新的運動類型名稱"></div>
+          <button class="btn ghost" onclick="addExerciseType()">＋ 新增類型</button>
+        </div>
+        <button class="btn blue" onclick="addExercise()">＋ 新增運動記錄</button>
+        <div style="text-align:center;margin-top:10px;font-size:14px;color:var(--muted)">
+          今日累計運動 <b id="exTodayMin" style="color:var(--blue-d)">0</b> 分鐘
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h3>📋 喝水 / 運動紀錄時間軸</h3>
+        <button class="btn ghost" style="width:auto;padding:7px 14px;font-size:13px" onclick="fetchRemoteWaterExercise()">🔄 重新同步 Telegram</button>
+      </div>
+      <div id="lifeTimeline"><div class="empty">還沒有任何喝水或運動記錄，開始記錄吧！</div></div>
     </div>
   </div>
 </section>
@@ -652,6 +729,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>{
     if(b.dataset.t==='dash'){renderDash();}
     if(b.dataset.t==='record'){renderBigChart();}
     if(b.dataset.t==='diet'){renderCalChart();fetchRemoteDietRecords();fetchDietReports();}
+    if(b.dataset.t==='life'){renderWater();renderLifeTimeline();updateExTodayMin();fetchRemoteWaterExercise();}
   };
 });
 
@@ -740,16 +818,22 @@ function renderDash(){
       scales:{y:{suggestedMin:GOAL-2,suggestedMax:START+1,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
   let done=0;Object.values(tasks).forEach(v=>{if(v)done++;});
   document.getElementById('doneCount').textContent=done;
+  const ttEl=document.getElementById('totalTasksTxt'); if(ttEl)ttEl.textContent=totalTasksCount();
+  const thEl=document.getElementById('totalTasksHint'); if(thEl)thEl.textContent=totalTasksCount();
   const dctx=document.getElementById('taskDonut');
   if(donut)donut.destroy();
   donut=new Chart(dctx,{type:'doughnut',
-    data:{labels:['已完成','未完成'],datasets:[{data:[done,TOTAL_TASKS-done],
+    data:{labels:['已完成','未完成'],datasets:[{data:[done,totalTasksCount()-done],
       backgroundColor:['#16a34a','#e6eaf0'],borderWidth:0}]},
     options:{cutout:'70%',plugins:{legend:{position:'bottom',labels:{font:{size:12},boxWidth:12}}}}});
 }
 
 /* ====== 週卡（每日打卡） ====== */
-const TOTAL_TASKS=12*3*7; // 12週 x ABC 3項 x 7天 = 252
+const LS_EXTRA='jd_extraweeks_v1';
+let extraWeeks=JSON.parse(localStorage.getItem(LS_EXTRA)||'[]');
+function combinedWeeks(){return WEEKS.concat(extraWeeks);}
+function saveExtraWeeks(){localStorage.setItem(LS_EXTRA,JSON.stringify(extraWeeks));}
+function totalTasksCount(){return combinedWeeks().length*3*7;}
 function taskKey(w,k,d){return 'w'+w+k+'d'+d;} // d = 1~7
 function weekDate(n,d){ // n=週次(1~12), d=第幾天(1~7)
   const base=new Date(START_DATE+'T00:00:00');
@@ -772,9 +856,43 @@ function weekDoneCount(n){
   let c=0;['A','B','C'].forEach(k=>c+=taskDoneCount(n,k));
   return c;
 }
+async function generateNextWeeks(){
+  const key=getApiKey();
+  if(!key){alert('請先到「🍽 飲食記錄」頁籤設定 Anthropic API 金鑰');return;}
+  const btn=document.getElementById('genWeeksBtn');
+  const status=document.getElementById('genWeeksStatus');
+  btn.disabled=true;btn.textContent='🤖 規劃中，請稍候...';
+  try{
+    const all=combinedWeeks();
+    const nextStart=all.length+1;
+    const batch=[nextStart,nextStart+1,nextStart+2,nextStart+3];
+    const doneSummary=all.map(w=>`第${w.n}週(${w.title})：A「${w.A.t}」完成${taskDoneCount(w.n,'A')}/7、B「${w.B.t}」完成${taskDoneCount(w.n,'B')}/7、C「${w.C.t}」完成${taskDoneCount(w.n,'C')}/7`).join('\n');
+    const cur=records.length?records[records.length-1].weight:START;
+    const weightTrend=records.length?`目前體重${cur}kg，起始${START}kg，目標${GOAL}kg`:`尚無體重記錄，起始${START}kg，目標${GOAL}kg`;
+    const prompt=`你是使用者的減重教練與營養師，使用者正在執行「ABC黃金瘦身法」，每週有A(飲食加法)、B(活動/習慣)、C(飲食減法)三項任務，每項任務執行7天。\n\n已完成的週次與落實狀況：\n${doneSummary}\n\n${weightTrend}\n\n請根據以上執行狀況與體重趨勢（哪些任務落實度高、哪些低、體重是否有進展），規劃接下來第${batch[0]}~${batch[3]}週（共4週）的新任務，難度應循序漸進、且針對執行不佳的面向給予更容易達成的替代任務，執行良好的面向可以進階。務必只回傳一個JSON陣列，不要有其他文字，格式為：[{"n":${batch[0]},"title":"第${batch[0]}週標題","sub":"副標","A":{"t":"任務簡述(15字內)","p":["重點1","重點2","重點3"],"why":"為什麼有效(繁中,50字內)"},"B":{...},"C":{...}},...] 共4筆，n分別為${batch.join(',')}，全部使用繁體中文。`;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2500,messages:[{role:'user',content:prompt}]})
+    });
+    if(!resp.ok){const t=await resp.text();throw new Error('API錯誤('+resp.status+')：'+t.slice(0,200));}
+    const data=await resp.json();
+    const text=(data.content&&data.content[0]&&data.content[0].text)||'[]';
+    const jsonMatch=text.match(/\[[\s\S]*\]/);
+    const newWeeks=JSON.parse(jsonMatch?jsonMatch[0]:text);
+    extraWeeks=extraWeeks.concat(newWeeks);
+    saveExtraWeeks();
+    renderWeeks();renderDash();
+    status.textContent='✅ 已生成第'+batch[0]+'~'+batch[3]+'週任務！';
+  }catch(err){
+    status.textContent='⚠️ 生成失敗：'+err.message;
+  }finally{
+    btn.disabled=false;btn.textContent='➕ 產生下一批 4 週任務';
+  }
+}
 function renderWeeks(){
   const g=document.getElementById('weekgrid');
-  g.innerHTML=WEEKS.map(w=>{
+  g.innerHTML=combinedWeeks().map(w=>{
     const total=weekDoneCount(w.n);
     const all=total===21;
     const imgs=WEEK_IMAGES[w.n]||[];
@@ -791,16 +909,19 @@ function renderWeeks(){
     </div>`;
   }).join('');
 }
+let aiSuggestions={}; // {weekN: {1:{A,B,C reason strings}, ...}}
 function openWeek(n){
-  const w=WEEKS.find(x=>x.n===n);
+  const w=combinedWeeks().find(x=>x.n===n);
   document.getElementById('m-wno').textContent='WEEK '+String(n).padStart(2,'0')+' · '+w.sub;
   document.getElementById('m-title').textContent=w.title;
   const block=(k,o)=>{
+    const sugg=aiSuggestions[n];
     const days=[...Array(7)].map((_,i)=>{
       const d=i+1, dt=weekDate(n,d);
       const ck=tasks[taskKey(n,k,d)]?'checked':'';
+      const s=sugg&&sugg[d]&&sugg[d][k]?`<div class="sugg" title="${sugg[d][k].reason||''}">${sugg[d][k].icon||''}</div>`:'';
       return `<div class="daycell ${isToday(dt)?'today':''}"><div class="dl">${fmtDate(dt)}</div>
-        <input type="checkbox" ${ck} onchange="toggleTask(${n},'${k}',${d},this.checked)"></div>`;
+        <input type="checkbox" ${ck} onchange="toggleTask(${n},'${k}',${d},this.checked)">${s}</div>`;
     }).join('');
     return `<div class="taskblock ${k}">
       <div class="th"><span class="badge">${k}</span><h5>${o.t}</h5>
@@ -813,8 +934,43 @@ function openWeek(n){
   const imgs=WEEK_IMAGES[n]||[];
   const galleryHtml=imgs.length?`<div class="subhead" style="margin:18px 0 4px;font-size:15px"><span class="dot"></span>📷 本週實作照片（${imgs.length} 張，點圖放大看原圖）</div>
     <div class="gallery">${imgs.map(p=>`<a href="${encodeURI(p)}" target="_blank"><img src="${encodeURI(p)}" loading="lazy" alt="第${n}週照片"></a>`).join('')}</div>`:'';
-  document.getElementById('m-body').innerHTML=block('A',w.A)+block('B',w.B)+block('C',w.C)+galleryHtml;
+  const aiBtn=`<button class="btn ghost" style="width:auto;padding:8px 16px;font-size:13px;margin-bottom:14px" id="aiSuggBtn" onclick="aiSuggestWeek(${n})">🤖 AI教練評估本週落實情形（僅供參考，仍由你勾選）</button>`;
+  document.getElementById('m-body').innerHTML=aiBtn+block('A',w.A)+block('B',w.B)+block('C',w.C)+galleryHtml;
   document.getElementById('modal').classList.add('show');
+}
+async function aiSuggestWeek(n){
+  const key=getApiKey();
+  if(!key){alert('請先到「🍽 飲食記錄」頁籤設定 Anthropic API 金鑰，才能使用 AI 教練評估功能');return;}
+  const w=combinedWeeks().find(x=>x.n===n);
+  const btn=document.getElementById('aiSuggBtn');
+  if(btn){btn.disabled=true;btn.textContent='🤖 評估中，請稍候...';}
+  try{
+    const from=weekDate(n,1).toISOString().slice(0,10);
+    const to=weekDate(n,7).toISOString().slice(0,10);
+    const diet=allDietRecords().filter(r=>(r.time||'').slice(0,10)>=from&&(r.time||'').slice(0,10)<=to)
+      .map(r=>`${(r.time||'').slice(0,10)} ${r.meal}: ${r.note||''} ${r.cal?('約'+r.cal+'大卡'):''}`).join('\n')||'（本週無飲食記錄）';
+    const water=allWaterRecords().filter(r=>(r.time||'').slice(0,10)>=from&&(r.time||'').slice(0,10)<=to)
+      .map(r=>`${(r.time||'').slice(0,10)} 喝水${r.ml}cc`).join('\n')||'（本週無喝水記錄）';
+    const ex=allExerciseRecords().filter(r=>(r.time||'').slice(0,10)>=from&&(r.time||'').slice(0,10)<=to)
+      .map(r=>`${(r.time||'').slice(0,10)} ${r.type} ${r.min}分鐘${r.note?'('+r.note+')':''}`).join('\n')||'（本週無運動記錄）';
+    const prompt=`你是使用者的減重教練。本週（第${n}週，${from}~${to}）任務：\nA任務：${w.A.t}\nB任務：${w.B.t}\nC任務：${w.C.t}\n\n使用者這週的飲食記錄：\n${diet}\n\n喝水記錄：\n${water}\n\n運動記錄：\n${ex}\n\n請針對這週的每一天（第1天到第7天，第1天是${from}），依上述紀錄「合理推測」他當天A、B、C三項任務各自的落實程度，只能依據紀錄推論，資料不足就誠實標示不確定。務必只回傳一個JSON陣列，不要有其他文字，格式為：[{"d":1,"A":{"icon":"✅或❓或⚠️","reason":"一句話原因，15字內"},"B":{...},"C":{...}},...] 共7筆(d從1到7)。icon只能是✅(有落實)、❓(資料不足看不出來)、⚠️(可能沒落實)三選一。`;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+    });
+    if(!resp.ok){const t=await resp.text();throw new Error('API錯誤('+resp.status+')：'+t.slice(0,200));}
+    const data=await resp.json();
+    const text=(data.content&&data.content[0]&&data.content[0].text)||'[]';
+    const jsonMatch=text.match(/\[[\s\S]*\]/);
+    const arr=JSON.parse(jsonMatch?jsonMatch[0]:text);
+    const map={};arr.forEach(x=>{map[x.d]={A:x.A,B:x.B,C:x.C};});
+    aiSuggestions[n]=map;
+    openWeek(n);
+  }catch(err){
+    alert('AI評估失敗：'+err.message);
+    if(btn){btn.disabled=false;btn.textContent='🤖 AI教練評估本週落實情形（僅供參考，仍由你勾選）';}
+  }
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
 function toggleTask(n,k,d,v){
@@ -885,6 +1041,14 @@ function previewDietPhoto(e){
   reader.readAsDataURL(file);
 }
 
+function currentWeekInfo(){
+  const start=new Date(START_DATE+'T00:00:00');
+  const now=new Date();
+  const diffDays=Math.floor((now-start)/86400000);
+  let n=Math.floor(diffDays/7)+1;
+  if(n<1)n=1; if(n>12)n=12;
+  return WEEKS.find(w=>w.n===n)||WEEKS[0];
+}
 async function analyzeDiet(){
   const key=getApiKey();
   if(!key){alert('請先在上方設定 Anthropic API 金鑰');return;}
@@ -892,6 +1056,10 @@ async function analyzeDiet(){
   const btn=document.getElementById('analyzeBtn');
   btn.disabled=true;btn.textContent='🤖 分析中，請稍候...';
   try{
+    const w=currentWeekInfo();
+    const taskCtx=`本週（第${w.n}週）的任務重點：A（飲食加法）${w.A.t}；B（活動/習慣）${w.B.t}；C（減法）${w.C.t}。`;
+    const userNote=(document.getElementById('i-diet-note').value||'').trim();
+    const noteCtx=userNote?`使用者補充說明（請優先參考這裡的資訊，例如份量、品牌、是否無糖/無糖標示、是否為包裝標示熱量等，這些資訊比單純看照片更準確）：「${userNote}」。`:'';
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{
@@ -902,10 +1070,10 @@ async function analyzeDiet(){
       },
       body:JSON.stringify({
         model:'claude-sonnet-4-5',
-        max_tokens:600,
+        max_tokens:700,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:pendingPhotoMime,data:pendingPhotoBase64}},
-          {type:'text',text:'你是一位營養師，這是使用者的一餐照片。請用繁體中文簡短回覆，內容包含：1) 辨識出的食物項目 2) 估計總熱量 3) 這一餐符合「ABC瘦身法」的程度（蔬菜夠不夠、有無精緻糖油炸物、蛋白質夠不夠）4) 一句具體的改善建議。用條列式，每點一行，總共不超過150字。第一行請務必用「熱量估計：XXX大卡」這個固定格式開頭，方便程式擷取數字。'}
+          {type:'text',text:'你是一位專業營養師，同時也是使用者的減重教練，正在協助他執行「ABC黃金瘦身法」12週課程。這是使用者的一餐或一杯飲料的照片。'+taskCtx+' '+noteCtx+' 熱量估算請務必仔細考量「實際份量大小」而非套用一般平均值：請參考照片中碗盤/杯子與桌面、餐具、手掌等物件的相對大小來判斷份量是小份、中份還是大份，飯量目測估算白飯體積、肉的塊數與厚度大小等，再據此估算熱量，不要不論份量大小都給出類似的數字。若使用者備註或包裝上標示「無糖」「0卡」「零卡」等資訊，熱量應以該資訊為準（例如無糖茶飲熱量應接近0大卡），不要憑外觀另外估算出遠高於此的熱量。請用繁體中文簡短回覆，內容包含：1) 辨識出的食物/飲料項目與大致份量 2) 估計總熱量（需反映實際份量與上述已知資訊）3) 從營養師角度評估這一餐的營養組成（蔬菜/蛋白質/碳水比例、精緻糖油炸物、纖維量）4) 明確指出這一餐跟「本週任務」的搭配程度（例如是否符合本週A/B/C任務精神）5) 一句具體、可立即執行的改善建議。用條列式，每點一行，總共不超過200字，語氣像關心你的教練，鼓勵但不說教。第一行請務必用「熱量估計：XXX大卡」這個固定格式開頭，方便程式擷取數字。'}
         ]}]
       })
     });
@@ -1047,11 +1215,133 @@ function renderCalChart(){
     options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:11}}},x:{ticks:{font:{size:11}}}}}});
 }
 
+/* ====== 喝水 / 運動記錄 ====== */
+const LS_WATER='jd_water_v1', LS_EXERCISE='jd_exercise_v1', LS_EXTYPES='jd_extypes_v1';
+const WATER_API_URL='https://n8n-justin8206-new.zeabur.app/webhook/water-records';
+const EXERCISE_API_URL='https://n8n-justin8206-new.zeabur.app/webhook/exercise-records';
+let waterRecords=JSON.parse(localStorage.getItem(LS_WATER)||'[]');
+let exerciseRecords=JSON.parse(localStorage.getItem(LS_EXERCISE)||'[]');
+let exerciseTypes=JSON.parse(localStorage.getItem(LS_EXTYPES)||'null')||['走路','跑步','舉啞鈴','抬腿','其他'];
+let remoteWaterRecords=[], remoteExerciseRecords=[];
+
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function currentWeightForWater(){return records.length?records[records.length-1].weight:START;}
+function waterTargetToday(){return Math.round(currentWeightForWater()*33);} // 30~40cc取中間值33
+
+function saveWater(){localStorage.setItem(LS_WATER,JSON.stringify(waterRecords));}
+function addWater(ml){
+  waterRecords.push({id:Date.now(),time:new Date().toISOString().slice(0,16),ml:ml});
+  saveWater();renderWater();renderLifeTimeline();
+}
+function addWaterCustom(){
+  const v=parseInt(document.getElementById('i-water-custom').value);
+  if(!v||v<=0){alert('請輸入正確的cc數');return;}
+  addWater(v);
+  document.getElementById('i-water-custom').value='';
+}
+function allWaterRecords(){
+  const merged=waterRecords.concat(remoteWaterRecords);
+  merged.sort((a,b)=>(b.time||'').localeCompare(a.time||''));
+  return merged;
+}
+function renderWater(){
+  const target=waterTargetToday();
+  const t=todayStr();
+  const todays=allWaterRecords().filter(r=>(r.time||'').slice(0,10)===t);
+  const total=todays.reduce((s,r)=>s+(r.ml||0),0);
+  const pct=Math.min(100,Math.round(total/target*100));
+  const hintEl=document.getElementById('waterTargetHint');
+  if(hintEl)hintEl.textContent='依目前體重 '+currentWeightForWater().toFixed(1)+'kg 估算，建議每日喝水約 '+target+'cc（體重×30～40cc）。';
+  const totEl=document.getElementById('waterTodayTotal'); if(totEl)totEl.textContent=total+' cc';
+  const tgtEl=document.getElementById('waterTargetTxt'); if(tgtEl)tgtEl.textContent='目標 '+target+' cc';
+  const pctEl=document.getElementById('waterPct'); if(pctEl)pctEl.textContent=pct+'%';
+  const barEl=document.getElementById('waterBar'); if(barEl)barEl.style.width=pct+'%';
+}
+
+function saveExerciseTypes(){localStorage.setItem(LS_EXTYPES,JSON.stringify(exerciseTypes));}
+function renderExerciseTypeSelect(){
+  const sel=document.getElementById('i-ex-type');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML=exerciseTypes.map(t=>`<option>${t}</option>`).join('');
+  if(exerciseTypes.includes(cur))sel.value=cur;
+}
+function addExerciseType(){
+  const v=document.getElementById('i-ex-newtype').value.trim();
+  if(!v){alert('請輸入運動類型名稱');return;}
+  if(!exerciseTypes.includes(v)){exerciseTypes.push(v);saveExerciseTypes();renderExerciseTypeSelect();}
+  document.getElementById('i-ex-type').value=v;
+  document.getElementById('i-ex-newtype').value='';
+}
+function saveExercise(){localStorage.setItem(LS_EXERCISE,JSON.stringify(exerciseRecords));}
+function addExercise(){
+  const type=document.getElementById('i-ex-type').value;
+  const min=parseInt(document.getElementById('i-ex-min').value);
+  if(!type){alert('請選擇運動類型');return;}
+  if(!min||min<=0){alert('請輸入時長（分鐘）');return;}
+  exerciseRecords.push({id:Date.now(),time:new Date().toISOString().slice(0,16),type,min,
+    note:document.getElementById('i-ex-note').value});
+  saveExercise();
+  document.getElementById('i-ex-min').value='';document.getElementById('i-ex-note').value='';
+  renderLifeTimeline();updateExTodayMin();
+}
+function delExercise(id){if(confirm('刪除這筆運動記錄？')){exerciseRecords=exerciseRecords.filter(r=>r.id!==id);saveExercise();renderLifeTimeline();updateExTodayMin();}}
+function delWater(id){if(confirm('刪除這筆喝水記錄？')){waterRecords=waterRecords.filter(r=>r.id!==id);saveWater();renderWater();renderLifeTimeline();}}
+function allExerciseRecords(){
+  const merged=exerciseRecords.concat(remoteExerciseRecords);
+  merged.sort((a,b)=>(b.time||'').localeCompare(a.time||''));
+  return merged;
+}
+function updateExTodayMin(){
+  const t=todayStr();
+  const total=allExerciseRecords().filter(r=>(r.time||'').slice(0,10)===t).reduce((s,r)=>s+(r.min||0),0);
+  const el=document.getElementById('exTodayMin'); if(el)el.textContent=total;
+}
+function renderLifeTimeline(){
+  const wrap=document.getElementById('lifeTimeline');
+  if(!wrap)return;
+  const w=allWaterRecords().map(r=>({...r,_kind:'water'}));
+  const e=allExerciseRecords().map(r=>({...r,_kind:'exercise'}));
+  const all=w.concat(e).sort((a,b)=>(b.time||'').localeCompare(a.time||''));
+  if(!all.length){wrap.innerHTML='<div class="empty">還沒有任何喝水或運動記錄，開始記錄吧！</div>';return;}
+  wrap.innerHTML=all.map(r=>{
+    const isTg=r.source==='telegram';
+    const tgBadge=isTg?'<span class="chip" style="background:#DBEAFE;color:#1D4ED8;margin-left:4px">✈️ Telegram</span>':'';
+    if(r._kind==='water'){
+      const delBtn=isTg?'':`<button class="del" onclick="delWater(${r.id})">刪</button>`;
+      return `<div class="diettime"><div style="width:88px;height:88px;border-radius:10px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">💧</div>
+        <div style="flex:1"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <div><span class="chip">喝水</span>${tgBadge} <b style="margin-left:6px">${(r.time||'').replace('T',' ')}</b></div>
+        <div><b style="color:var(--blue-d)">${r.ml} cc</b> ${delBtn}</div></div></div></div>`;
+    }else{
+      const delBtn=isTg?'':`<button class="del" onclick="delExercise(${r.id})">刪</button>`;
+      return `<div class="diettime"><div style="width:88px;height:88px;border-radius:10px;background:#e7f6ec;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">🏃</div>
+        <div style="flex:1"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <div><span class="chip" style="background:#e7f6ec;color:#16a34a">${r.type}</span>${tgBadge} <b style="margin-left:6px">${(r.time||'').replace('T',' ')}</b>${r.note?' · '+r.note:''}</div>
+        <div><b style="color:#16a34a">${r.min} 分鐘</b> ${delBtn}</div></div></div></div>`;
+    }
+  }).join('');
+}
+async function fetchRemoteWaterExercise(){
+  try{
+    const resp=await fetch(WATER_API_URL,{cache:'no-store'});
+    if(resp.ok){const data=await resp.json();
+      remoteWaterRecords=(data.records||[]).map(r=>({id:'tgw_'+r.time,time:r.time,ml:r.ml,source:'telegram'}));}
+  }catch(err){}
+  try{
+    const resp=await fetch(EXERCISE_API_URL,{cache:'no-store'});
+    if(resp.ok){const data=await resp.json();
+      remoteExerciseRecords=(data.records||[]).map(r=>({id:'tge_'+r.time,time:r.time,type:r.type,min:r.min,note:r.note||'',source:'telegram'}));}
+  }catch(err){}
+  renderWater();renderLifeTimeline();updateExTodayMin();
+}
+
 /* ====== init ====== */
 document.getElementById('i-date').value=new Date().toISOString().slice(0,10);
 const _dietTimeEl=document.getElementById('i-diet-time');
 if(_dietTimeEl)_dietTimeEl.value=new Date().toISOString().slice(0,16);
 renderTable();renderWeeks();renderRes();renderDash();renderDietTimeline();renderCalChart();renderReportHistory();
+renderExerciseTypeSelect();renderWater();renderLifeTimeline();updateExTodayMin();
 </script>
 </body>
 </html>
