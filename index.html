@@ -253,6 +253,7 @@ footer b{color:#fff}
     <button data-t="concept">💡 核心觀念</button>
     <button data-t="diet">🍽 飲食記錄</button>
     <button data-t="life">💧 喝水運動</button>
+    <button data-t="help">📖 使用說明</button>
   </div>
 </nav>
 
@@ -612,6 +613,71 @@ footer b{color:#fff}
         <button class="btn ghost" style="width:auto;padding:7px 14px;font-size:13px" onclick="fetchRemoteWaterExercise()">🔄 重新同步 Telegram</button>
       </div>
       <div id="lifeTimeline"><div class="empty">還沒有任何喝水或運動記錄，開始記錄吧！</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- HELP -->
+<section class="panel" id="help">
+  <div class="wrap">
+    <h2 class="sec">📖 使用<span class="em">說明</span></h2>
+    <p class="lead">這個網站怎麼用、資料存在哪裡、要怎麼維護，都整理在這裡。手機打開這頁隨時可以查。</p>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>🗂 各頁籤功能</h3>
+      <div class="hint">網站上方的頁籤，每個功能如下：</div>
+      <ul style="margin-left:18px;font-size:14px">
+        <li><b>📊 我的進度</b>：起始/目前/已減/距目標卡片、體重趨勢圖、12週任務完成度圓餅圖</li>
+        <li><b>🩺 體檢對照</b>：歷次體檢報告數字對照</li>
+        <li><b>⚖️ 體檢記錄</b>：新增體重/體脂/腰腹臀圍，這裡新增的體重會自動同步雲端</li>
+        <li><b>📅 12 週任務</b>：每週 A/B/C 三項任務展開7天打卡格，可看當週實作照片</li>
+        <li><b>📚 學習資源</b>：一休文章與課程影片</li>
+        <li><b>💡 核心觀念</b>：17條減重心法</li>
+        <li><b>🍽 飲食記錄</b>：上傳照片AI分析熱量，或用Telegram傳照片自動記錄</li>
+        <li><b>💧 喝水運動</b>：記錄喝水量與運動，可自訂運動類型</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>✈️ Telegram 記錄（飲食／喝水／運動／體重）</h3>
+      <div class="hint">不想打開網站時，直接傳訊息給 Telegram Bot「減重飲食Bot」即可：</div>
+      <ul style="margin-left:18px;font-size:14px">
+        <li>傳一張餐點照片（可加文字說明，如「午餐」）→ 自動AI分析熱量並回覆</li>
+        <li>傳文字「喝水500」→ 記錄喝水500cc</li>
+        <li>傳文字「走路30分鐘」→ 記錄運動</li>
+        <li>傳文字「體重88.5」→ 記錄體重，會自動同步到網站</li>
+        <li>這些記錄都會自動同步到網站對應頁籤，不需要手動匯入</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>☁️ 哪些資料會跨裝置同步？</h3>
+      <div class="hint">換手機、換電腦、換瀏覽器打開網站，以下資料都看得到最新狀態：</div>
+      <ul style="margin-left:18px;font-size:14px">
+        <li>✅ 體重記錄（不管從網站新增還是Telegram傳「體重XX」）</li>
+        <li>✅ 12週任務打卡進度（勾選會自動同步，但打卡只能從網站操作，Telegram不支援）</li>
+        <li>✅ 飲食／喝水／運動記錄（透過Telegram傳送的部分）</li>
+        <li>⚠️ 體脂、腰圍、腹圍、臀圍：只存在當初輸入那台裝置的瀏覽器裡，不會跨裝置同步</li>
+        <li>⚠️ 在網站直接手動新增的喝水／運動記錄（沒有透過Telegram）：只存在本機瀏覽器</li>
+      </ul>
+      <div class="hint" style="margin-top:8px">體重記錄若標示「☁️ 已同步」表示來自雲端（含Telegram），無法從網站刪除；只有顯示「刪」的本機記錄可以自行刪除。</div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>⚙️ 修改目標設定</h3>
+      <div class="hint">右上角「⚙️ 修改目標設定」可自行調整起始體重、目標體重、起始日期，改完立即套用到全站顯示。</div>
+    </div>
+
+    <div class="card">
+      <h3>❓ 常見問題</h3>
+      <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">為什麼我在手機上打卡，換電腦打開卻沒看到？</summary>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:6px">請確認兩台裝置都能連上網路（打卡需要即時同步到雲端），並重新整理網頁一次。若還是沒看到，可能是當下網路不穩導致同步失敗，補打卡一次即可。</p></details>
+      <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">體重記錄可以刪除嗎？</summary>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:6px">只有本機新增、還沒同步的記錄可以刪除。已顯示「☁️ 已同步」的記錄（含Telegram輸入的）目前無法從網站端刪除。</p></details>
+      <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">AI飲食分析要付費嗎？</summary>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:6px">在網站上傳照片分析，用的是你自己輸入的Anthropic API金鑰（依實際使用量計費）；透過Telegram傳照片則不需要自己的金鑰，由系統統一處理。</p></details>
+      <details><summary style="cursor:pointer;font-weight:600">忘記怎麼用了，有沒有更完整的技術文件？</summary>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:6px">有，本機電腦上還有一份「系統開發紀錄.html」，記錄了完整的開發歷程、系統架構與維護方式（給比較想深入了解的人看）。</p></details>
     </div>
   </div>
 </section>
