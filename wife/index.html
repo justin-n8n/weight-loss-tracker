@@ -399,7 +399,7 @@ footer b{color:#fff}
     <div class="conceptgrid">
       <div class="concept"><h4>減重是加法，不是減法</h4><p>重點是把更多「好的、健康的元素」加進生活，而不是一味禁止。增加什麼，比禁止什麼容易得多。</p></div>
       <div class="concept"><h4>不需要 100 分才會成功</h4><p>做到 60、70、80 分都是進步。關注自己「能做到的」，而不是「沒做到的」。</p></div>
-      <div class="concept"><h4>穩定血糖是關鍵</h4><p>多纖維、調整進食順序、避開精緻糖與糖油混合物，讓血糖平穩、胰島素不過量分泌，脂肪就不易屯積。</p></div>
+      <div class="concept"><h4>穩定血糖是關鍵</h4><p>多纖維、調整進食順序、避開精緻糖與糖油混合物，讓血糖平穩、胰島素不過量，脂肪就不易屯積。</p></div>
       <div class="concept"><h4>維持高活動量 > 單次運動</h4><p>一整天保持高活動量，比運動 30 分鐘後躺一整天更有效。飯後走路是最好的時機。</p></div>
       <div class="concept"><h4>瘦一輩子，不是瘦一陣子</h4><p>不求快，求的是「持續的力量」。把不習慣刻意練習成習慣，內化成易瘦的生活方式。</p></div>
       <div class="concept"><h4>體態 > 體重</h4><p>你的價值不由體重決定。感受好、看起來好，比體重計上的數字更有意義。</p></div>
@@ -778,16 +778,45 @@ async function postWeightRemote(rec){
 async function fetchRemoteWeightRecords(){
   try{
     const resp=await fetch(WEIGHT_API_URL,{cache:'no-store'});
-    if(resp.ok){const data=await resp.json(); remoteWeightRecords=data.records||[];}
+    if(resp.ok){
+      const data=await resp.json(); remoteWeightRecords=data.records||[];
+      // 本機記錄一旦同一天已經有雲端版本，資料已經被allWeightRecords()合併吸收，
+      // 清掉本機那筆避免localStorage無限累積用不到的重複資料
+      const remoteDates=new Set(remoteWeightRecords.map(r=>(r.time||'').slice(0,10)));
+      const before=records.length;
+      records=records.filter(r=>!remoteDates.has(r.date));
+      if(records.length!==before) saveRec();
+    }
   }catch(err){}
   renderTable();renderBigChart();renderDash();
 }
 function allWeightRecords(){
+  // 同一天可能有多筆雲端記錄（例如網站跟Telegram都各記一次），
+  // 用最新一筆的體重為主，缺少的體脂/腰/腹/臀圍欄位則從同一天其他筆(含本機)裡找有值的補齊，
+  // 避免像舊版那樣「同一天有兩筆時，其中一筆被整個蓋掉、資料悄悄消失」。
   const remoteByDate={};
-  remoteWeightRecords.forEach(r=>{const dt=(r.time||'').slice(0,10); if(dt)remoteByDate[dt]=r;});
-  const localOnly=records.filter(r=>!remoteByDate[r.date]).map(r=>({...r,source:'local'}));
-  const remoteMapped=remoteWeightRecords.map(r=>({date:(r.time||'').slice(0,10),weight:r.weight,fat:r.fat,waist:r.waist,belly:r.belly,hip:r.hip,source:r.source||'remote'}));
-  const merged=localOnly.concat(remoteMapped);
+  remoteWeightRecords.forEach(r=>{
+    const dt=(r.time||'').slice(0,10); if(!dt) return;
+    if(!remoteByDate[dt]) remoteByDate[dt]=[];
+    remoteByDate[dt].push(r);
+  });
+  const merged=[];
+  const mergedDates=new Set();
+  Object.keys(remoteByDate).forEach(dt=>{
+    const rows=remoteByDate[dt];
+    const latest=rows[rows.length-1];
+    const combined={date:dt, weight:latest.weight, fat:null, waist:null, belly:null, hip:null, source:latest.source||'remote'};
+    ['fat','waist','belly','hip'].forEach(k=>{
+      for(let i=rows.length-1;i>=0;i--){ if(rows[i][k]!=null){combined[k]=rows[i][k]; break;} }
+    });
+    const localMatch=records.find(r=>r.date===dt);
+    if(localMatch){
+      ['fat','waist','belly','hip'].forEach(k=>{ if(combined[k]==null && localMatch[k]!=null) combined[k]=localMatch[k]; });
+    }
+    merged.push(combined);
+    mergedDates.add(dt);
+  });
+  records.filter(r=>!mergedDates.has(r.date)).forEach(r=>merged.push({...r,source:'local'}));
   merged.sort((a,b)=>a.date.localeCompare(b.date));
   return merged;
 }
@@ -1049,13 +1078,19 @@ async function postTaskRemote(key,v){
     await fetch(TASK_ADD_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskKey:key,value:v,source:'website'})});
   }catch(err){}
 }
+let taskLocalTimestamps={}; // 記錄每個taskKey最近一次「本機剛勾選」的時間，避免同步時被舊的雲端資料蓋回去
+const TASK_SYNC_GRACE_MS=6000; // 剛勾選後6秒內，即使雲端讀到舊值也先信本機（給POST時間真正寫進去）
 async function fetchRemoteTasks(){
   try{
     const resp=await fetch(TASK_API_URL,{cache:'no-store'});
     if(resp.ok){
       const data=await resp.json();
       const remote=data.tasks||{};
-      tasks=Object.assign({},tasks,remote);
+      const now=Date.now();
+      Object.keys(remote).forEach(k=>{
+        const justChangedLocally=taskLocalTimestamps[k] && (now-taskLocalTimestamps[k]<TASK_SYNC_GRACE_MS);
+        if(!justChangedLocally) tasks[k]=remote[k];
+      });
       localStorage.setItem(LS_TASK,JSON.stringify(tasks));
     }
   }catch(err){}
@@ -1064,6 +1099,7 @@ async function fetchRemoteTasks(){
 function toggleTask(n,k,d,v){
   const key=taskKey(n,k,d);
   tasks[key]=v;localStorage.setItem(LS_TASK,JSON.stringify(tasks));
+  taskLocalTimestamps[key]=Date.now();
   postTaskRemote(key,v);
   renderWeeks();renderDash();
   openWeek(n); // 重新渲染彈窗內容以更新進度數字
