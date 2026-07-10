@@ -791,57 +791,95 @@ document.querySelectorAll('nav.tabs button').forEach(b=>{
     b.classList.add('active');
     document.getElementById(b.dataset.t).classList.add('show');
     window.scrollTo({top:0,behavior:'smooth'});
-    if(b.dataset.t==='dash'){renderDash();}
-    if(b.dataset.t==='record'){renderBigChart();}
+    if(b.dataset.t==='dash'){renderDash();fetchRemoteWeightRecords();}
+    if(b.dataset.t==='record'){renderBigChart();fetchRemoteWeightRecords();}
     if(b.dataset.t==='diet'){renderCalChart();fetchRemoteDietRecords();fetchDietReports();}
     if(b.dataset.t==='life'){renderWater();renderLifeTimeline();updateExTodayMin();fetchRemoteWaterExercise();}
+    if(b.dataset.t==='weeks'){fetchRemoteTasks();}
   };
 });
 
-/* ====== 記錄 ====== */
+/* ====== 記錄（雲端同步） ====== */
+const WEIGHT_API_URL='https://n8n-justin8206-new.zeabur.app/webhook/weight-records';
+const WEIGHT_ADD_API_URL='https://n8n-justin8206-new.zeabur.app/webhook/weight-add';
+let remoteWeightRecords=[];
 function saveRec(){localStorage.setItem(LS_REC,JSON.stringify(records));}
+async function postWeightRemote(rec){
+  try{
+    await fetch(WEIGHT_ADD_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      time:rec.date+'T'+new Date().toTimeString().slice(0,5), weight:rec.weight, fat:rec.fat, waist:rec.waist, belly:rec.belly, hip:rec.hip, source:'website'
+    })});
+  }catch(err){/* 離線或連不到n8n時，本機記錄仍會保留 */}
+}
+async function fetchRemoteWeightRecords(){
+  try{
+    const resp=await fetch(WEIGHT_API_URL,{cache:'no-store'});
+    if(resp.ok){const data=await resp.json(); remoteWeightRecords=data.records||[];}
+  }catch(err){}
+  renderTable();renderBigChart();renderDash();
+}
+function allWeightRecords(){
+  const remoteByDate={};
+  remoteWeightRecords.forEach(r=>{const dt=(r.time||'').slice(0,10); if(dt)remoteByDate[dt]=r;});
+  const localOnly=records.filter(r=>!remoteByDate[r.date]).map(r=>({...r,source:'local'}));
+  const remoteMapped=remoteWeightRecords.map(r=>({date:(r.time||'').slice(0,10),weight:r.weight,fat:r.fat,waist:r.waist,belly:r.belly,hip:r.hip,source:r.source||'remote'}));
+  const merged=localOnly.concat(remoteMapped);
+  merged.sort((a,b)=>a.date.localeCompare(b.date));
+  return merged;
+}
 function addRecord(){
   const d=document.getElementById('i-date').value;
   const w=parseFloat(document.getElementById('i-weight').value);
   if(!d){alert('請選擇日期');return;}
   if(isNaN(w)){alert('請輸入體重');return;}
-  records.push({date:d,weight:w,
+  const rec={date:d,weight:w,
     fat:parseFloat(document.getElementById('i-fat').value)||null,
     waist:parseFloat(document.getElementById('i-waist').value)||null,
     belly:parseFloat(document.getElementById('i-belly').value)||null,
-    hip:parseFloat(document.getElementById('i-hip').value)||null});
+    hip:parseFloat(document.getElementById('i-hip').value)||null};
+  records.push(rec);
   records.sort((a,b)=>a.date.localeCompare(b.date));
   saveRec();
+  postWeightRemote(rec);
   ['i-weight','i-fat','i-waist','i-belly','i-hip'].forEach(id=>document.getElementById(id).value='');
   renderTable();renderBigChart();renderDash();
 }
-function delRecord(i){if(confirm('刪除這筆記錄？')){records.splice(i,1);saveRec();renderTable();renderBigChart();renderDash();}}
+function delRecordByDate(d){
+  if(confirm('刪除這筆記錄？（僅刪除本機這台裝置上的記錄，雲端同步的記錄不會被刪除）')){
+    records=records.filter(r=>r.date!==d);
+    saveRec();renderTable();renderBigChart();renderDash();
+  }
+}
 function renderTable(){
   const wrap=document.getElementById('recTableWrap');
-  if(!records.length){wrap.innerHTML='<div class="empty">還沒有任何記錄，從上方新增第一筆吧！起始 90.5kg（2026/7/13）就是你的起點。</div>';return;}
+  const all=allWeightRecords();
+  if(!all.length){wrap.innerHTML='<div class="empty">還沒有任何記錄，從上方新增第一筆吧！起始 90.5kg（2026/7/13）就是你的起點。</div>';return;}
   let h='<table class="rec"><tr><th>日期</th><th>體重</th><th>較上次</th><th>體脂%</th><th>腰</th><th>腹</th><th>臀</th><th></th></tr>';
-  records.forEach((r,i)=>{
+  all.forEach((r,i)=>{
     let diff='—';
-    if(i>0){const dv=(r.weight-records[i-1].weight).toFixed(1);
+    if(i>0){const dv=(r.weight-all[i-1].weight).toFixed(1);
       diff=dv>0?'<span style="color:#c0392b">▲'+dv+'</span>':dv<0?'<span style="color:#16a34a">▼'+Math.abs(dv)+'</span>':'－';}
+    const delBtn=r.source==='local'?`<button class="del" onclick="delRecordByDate('${r.date}')">刪</button>`:'<span class="chip" style="background:#DBEAFE;color:#1D4ED8">☁️ 已同步</span>';
     h+=`<tr><td>${r.date.slice(5)}</td><td><b>${r.weight.toFixed(1)}</b></td><td>${diff}</td>
       <td>${r.fat??'—'}</td><td>${r.waist??'—'}</td><td>${r.belly??'—'}</td><td>${r.hip??'—'}</td>
-      <td><button class="del" onclick="delRecord(${i})">刪</button></td></tr>`;
+      <td>${delBtn}</td></tr>`;
   });
   wrap.innerHTML=h+'</table>';
 }
 function exportCSV(){
-  if(!records.length){alert('沒有資料可匯出');return;}
+  const all=allWeightRecords();
+  if(!all.length){alert('沒有資料可匯出');return;}
   let csv='日期,體重(kg),體脂(%),腰圍(cm),腹圍(cm),臀圍(cm)\n';
-  records.forEach(r=>csv+=`${r.date},${r.weight},${r.fat??''},${r.waist??''},${r.belly??''},${r.hip??''}\n`);
+  all.forEach(r=>csv+=`${r.date},${r.weight},${r.fat??''},${r.waist??''},${r.belly??''},${r.hip??''}\n`);
   const blob=new Blob(['﻿'+csv],{type:'text/csv'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='體檢記錄.csv';a.click();
 }
 
 /* ====== 圖表 ====== */
 function chartData(){
-  const labels=records.map(r=>r.date.slice(5));
-  const wd=records.map(r=>r.weight);
+  const all=allWeightRecords();
+  const labels=all.map(r=>r.date.slice(5));
+  const wd=all.map(r=>r.weight);
   return{labels,wd};
 }
 function renderBigChart(){
@@ -859,7 +897,8 @@ function renderBigChart(){
       scales:{y:{suggestedMin:GOAL-2,suggestedMax:START+1,ticks:{font:{size:11}}},x:{ticks:{font:{size:11}}}}}});
 }
 function renderDash(){
-  const cur=records.length?records[records.length-1].weight:START;
+  const _allW=allWeightRecords();
+  const cur=_allW.length?_allW[_allW.length-1].weight:START;
   const lost=Math.max(0,START-cur);
   const togo=Math.max(0,cur-GOAL);
   const pct=Math.min(100,Math.max(0,((START-cur)/(START-GOAL))*100));
@@ -932,8 +971,9 @@ async function generateNextWeeks(){
     const nextStart=all.length+1;
     const batch=[nextStart,nextStart+1,nextStart+2,nextStart+3];
     const doneSummary=all.map(w=>`第${w.n}週(${w.title})：A「${w.A.t}」完成${taskDoneCount(w.n,'A')}/7、B「${w.B.t}」完成${taskDoneCount(w.n,'B')}/7、C「${w.C.t}」完成${taskDoneCount(w.n,'C')}/7`).join('\n');
-    const cur=records.length?records[records.length-1].weight:START;
-    const weightTrend=records.length?`目前體重${cur}kg，起始${START}kg，目標${GOAL}kg`:`尚無體重記錄，起始${START}kg，目標${GOAL}kg`;
+    const _allW2=allWeightRecords();
+    const cur=_allW2.length?_allW2[_allW2.length-1].weight:START;
+    const weightTrend=_allW2.length?`目前體重${cur}kg，起始${START}kg，目標${GOAL}kg`:`尚無體重記錄，起始${START}kg，目標${GOAL}kg`;
     const prompt=`你是使用者的減重教練與營養師，使用者正在執行「ABC黃金瘦身法」，每週有A(飲食加法)、B(活動/習慣)、C(飲食減法)三項任務，每項任務執行7天。\n\n已完成的週次與落實狀況：\n${doneSummary}\n\n${weightTrend}\n\n請根據以上執行狀況與體重趨勢（哪些任務落實度高、哪些低、體重是否有進展），規劃接下來第${batch[0]}~${batch[3]}週（共4週）的新任務，難度應循序漸進、且針對執行不佳的面向給予更容易達成的替代任務，執行良好的面向可以進階。務必只回傳一個JSON陣列，不要有其他文字，格式為：[{"n":${batch[0]},"title":"第${batch[0]}週標題","sub":"副標","A":{"t":"任務簡述(15字內)","p":["重點1","重點2","重點3"],"why":"為什麼有效(繁中,50字內)"},"B":{...},"C":{...}},...] 共4筆，n分別為${batch.join(',')}，全部使用繁體中文。`;
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -1038,8 +1078,29 @@ async function aiSuggestWeek(n){
   }
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
+const TASK_API_URL='https://n8n-justin8206-new.zeabur.app/webhook/task-records';
+const TASK_ADD_API_URL='https://n8n-justin8206-new.zeabur.app/webhook/task-add';
+async function postTaskRemote(key,v){
+  try{
+    await fetch(TASK_ADD_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskKey:key,value:v,source:'website'})});
+  }catch(err){}
+}
+async function fetchRemoteTasks(){
+  try{
+    const resp=await fetch(TASK_API_URL,{cache:'no-store'});
+    if(resp.ok){
+      const data=await resp.json();
+      const remote=data.tasks||{};
+      tasks=Object.assign({},tasks,remote);
+      localStorage.setItem(LS_TASK,JSON.stringify(tasks));
+    }
+  }catch(err){}
+  renderWeeks();renderDash();
+}
 function toggleTask(n,k,d,v){
-  tasks[taskKey(n,k,d)]=v;localStorage.setItem(LS_TASK,JSON.stringify(tasks));
+  const key=taskKey(n,k,d);
+  tasks[key]=v;localStorage.setItem(LS_TASK,JSON.stringify(tasks));
+  postTaskRemote(key,v);
   renderWeeks();renderDash();
   openWeek(n); // 重新渲染彈窗內容以更新進度數字
 }
@@ -1290,7 +1351,7 @@ let exerciseTypes=JSON.parse(localStorage.getItem(LS_EXTYPES)||'null')||['走路
 let remoteWaterRecords=[], remoteExerciseRecords=[];
 
 function todayStr(){return new Date().toISOString().slice(0,10);}
-function currentWeightForWater(){return records.length?records[records.length-1].weight:START;}
+function currentWeightForWater(){const _aw=allWeightRecords();return _aw.length?_aw[_aw.length-1].weight:START;}
 function waterTargetToday(){return Math.round(currentWeightForWater()*33);} // 30~40cc取中間值33
 
 function saveWater(){localStorage.setItem(LS_WATER,JSON.stringify(waterRecords));}
@@ -1403,6 +1464,8 @@ async function fetchRemoteWaterExercise(){
 
 /* ====== init ====== */
 updateHeroText();
+fetchRemoteWeightRecords();
+fetchRemoteTasks();
 document.getElementById('i-date').value=new Date().toISOString().slice(0,10);
 const _dietTimeEl=document.getElementById('i-diet-time');
 if(_dietTimeEl)_dietTimeEl.value=new Date().toISOString().slice(0,16);
